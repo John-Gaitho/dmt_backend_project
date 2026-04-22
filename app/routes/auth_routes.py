@@ -1,32 +1,76 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Header
+)
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from datetime import datetime, timedelta
+from pydantic import BaseModel
+
+from datetime import (
+    datetime,
+    timedelta
+)
+
 import jwt
 
 from app.database import get_session
 from app.models.user import User
 from app.config import settings
 
+from app.utils.security import (
+    hash_password,
+    verify_password
+)
+
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"]
 )
 
+# =========================
+# Request Models
+# =========================
 
-# 🔐 Create JWT Token
-def create_access_token(data: dict):
-    to_encode = data.copy()
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
 
-    expire = datetime.utcnow() + timedelta(
-        hours=settings.JWT_EXPIRY_HOURS
-    )
 
-    to_encode.update({"exp": expire})
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+# =========================
+# Create JWT Token
+# =========================
+
+def create_access_token(user: User):
+
+    payload = {
+
+        # user id
+        "sub": str(user.id),
+
+        # email
+        "email": user.email,
+
+        # 🔥 REQUIRED
+        "is_admin": user.is_admin,
+
+        "exp":
+            datetime.utcnow()
+            + timedelta(
+                hours=settings.JWT_EXPIRY_HOURS
+            )
+    }
 
     encoded_jwt = jwt.encode(
-        to_encode,
+        payload,
         settings.SECRET_KEY,
         algorithm=settings.JWT_ALGORITHM
     )
@@ -34,16 +78,20 @@ def create_access_token(data: dict):
     return encoded_jwt
 
 
-# 🧾 Signup
-@router.post("/signup")
-async def signup(
-    email: str,
-    password: str,
+# =========================
+# REGISTER
+# =========================
+
+@router.post("/register")
+async def register(
+    user: RegisterRequest,
     session: AsyncSession = Depends(get_session)
 ):
 
     result = await session.execute(
-        select(User).where(User.email == email)
+        select(User).where(
+            User.email == user.email
+        )
     )
 
     existing_user = result.scalar_one_or_none()
@@ -54,9 +102,13 @@ async def signup(
             detail="User already exists"
         )
 
+    hashed_pw = hash_password(
+        user.password
+    )
+
     new_user = User(
-        email=email,
-        password=password
+        email=user.email,
+        password_hash=hashed_pw
     )
 
     session.add(new_user)
@@ -68,40 +120,131 @@ async def signup(
     }
 
 
-# 🔐 Signin (Login)
-@router.post("/signin")
-async def signin(
-    email: str,
-    password: str,
+# =========================
+# LOGIN
+# =========================
+
+@router.post("/login")
+async def login(
+    user: LoginRequest,
     session: AsyncSession = Depends(get_session)
 ):
 
     result = await session.execute(
-        select(User).where(User.email == email)
+        select(User).where(
+            User.email == user.email
+        )
     )
 
-    user = result.scalar_one_or_none()
+    db_user = result.scalar_one_or_none()
 
-    if not user:
+    if not db_user:
         raise HTTPException(
             status_code=404,
             detail="User not found"
         )
 
-    if user.password != password:
+    if not verify_password(
+        user.password,
+        db_user.password_hash
+    ):
         raise HTTPException(
             status_code=401,
             detail="Incorrect password"
         )
 
-    # Create token
+    # ✅ FIXED
     access_token = create_access_token(
-        data={
-            "sub": user.email
-        }
+        db_user
     )
 
     return {
+
         "access_token": access_token,
+
         "token_type": "bearer"
+
+    }
+
+
+# =========================
+# 🔥 REQUIRED — GET CURRENT USER
+# =========================
+
+@router.get("/me")
+async def get_current_user(
+
+    authorization: str = Header(None),
+
+    session: AsyncSession = Depends(get_session)
+
+):
+
+    if not authorization:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Missing token"
+        )
+
+    token = authorization.replace(
+        "Bearer ",
+        ""
+    )
+
+    try:
+
+        payload = jwt.decode(
+
+            token,
+
+            settings.SECRET_KEY,
+
+            algorithms=[
+                settings.JWT_ALGORITHM
+            ]
+
+        )
+
+    except jwt.ExpiredSignatureError:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Token expired"
+        )
+
+    except jwt.InvalidTokenError:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid token"
+        )
+
+    user_id = payload.get("sub")
+
+    result = await session.execute(
+
+        select(User).where(
+            User.id == user_id
+        )
+
+    )
+
+    user = result.scalar_one_or_none()
+
+    if not user:
+
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    return {
+
+        "id": str(user.id),
+
+        "email": user.email,
+
+        "is_admin": user.is_admin
+
     }

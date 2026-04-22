@@ -9,7 +9,11 @@ class Product(Base):
     __tablename__ = "products"
 
     # Use String instead of UUID for SQLite
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(
+        String,
+        primary_key=True,
+        default=lambda: str(uuid.uuid4())
+    )
 
     name = Column(String, nullable=False)
 
@@ -18,6 +22,8 @@ class Product(Base):
     category = Column(String)
 
     description = Column(Text)
+
+    image_url = Column(String)  # ✅ NEW
 
     in_stock = Column(Boolean, default=True)
 

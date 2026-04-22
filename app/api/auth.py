@@ -1,24 +1,48 @@
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status
+)
 
-from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_session
 from app.models.user import User
+
 from app.utils.security import (
     hash_password,
     verify_password,
     create_token
 )
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/auth",
+    tags=["Authentication"]
+)
+
+# ============================
+# SIGNUP
+# ============================
 
 @router.post("/signup")
-async def signup(data: dict,
-                 db: AsyncSession = Depends(get_session)):
+async def signup(
+    data: dict,
+    db: AsyncSession = Depends(get_session)
+):
 
-    email = data["email"]
-    password = data["password"]
+    email = data.get("email")
+    password = data.get("password")
+
+    if not email or not password:
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email and password required"
+        )
+
+    # Check if user exists
 
     result = await db.execute(
         select(User).where(
@@ -26,30 +50,74 @@ async def signup(data: dict,
         )
     )
 
-    if result.scalar():
-        return {"error": "User exists"}
+    existing_user = result.scalar_one_or_none()
+
+    if existing_user:
+
+        raise HTTPException(
+            status_code=400,
+            detail="User already exists"
+        )
+
+    # Create user
 
     user = User(
+
         email=email,
-        password_hash=hash_password(password)
+
+        password_hash=
+            hash_password(password),
+
+        is_admin=False  # default
+
     )
 
     db.add(user)
+
     await db.commit()
 
-    token = create_token(user.id)
+    await db.refresh(user)
+
+    # Create token with admin flag
+
+    token = create_token(user)
 
     return {
-        "access_token": token
+
+        "access_token": token,
+
+        "user": {
+
+            "id": user.id,
+
+            "email": user.email,
+
+            "is_admin": user.is_admin
+
+        }
+
     }
 
 
-@router.post("/signin")
-async def signin(data: dict,
-                 db: AsyncSession = Depends(get_session)):
+# ============================
+# SIGNIN
+# ============================
 
-    email = data["email"]
-    password = data["password"]
+@router.post("/signin")
+async def signin(
+    data: dict,
+    db: AsyncSession = Depends(get_session)
+):
+
+    email = data.get("email")
+    password = data.get("password")
+
+    if not email or not password:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Email and password required"
+        )
 
     result = await db.execute(
         select(User).where(
@@ -57,18 +125,41 @@ async def signin(data: dict,
         )
     )
 
-    user = result.scalar()
+    user = result.scalar_one_or_none()
 
     if not user:
-        return {"error": "Invalid"}
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
 
     if not verify_password(
-            password,
-            user.password_hash):
-        return {"error": "Invalid"}
+        password,
+        user.password_hash
+    ):
 
-    token = create_token(user.id)
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+
+    # Create JWT with admin role
+
+    token = create_token(user)
 
     return {
-        "access_token": token
+
+        "access_token": token,
+
+        "user": {
+
+            "id": user.id,
+
+            "email": user.email,
+
+            "is_admin": user.is_admin
+
+        }
+
     }
