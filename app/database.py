@@ -5,25 +5,58 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from sqlalchemy.orm import declarative_base
+
 from app.config import settings
 
-# Create engine
+# =========================
+# DATABASE ENGINE
+# =========================
+
 engine = create_async_engine(
     settings.DATABASE_URL,
-    echo=True
+    echo=True,
+    future=True
 )
 
-# Session maker
-async_session = async_sessionmaker(
-    engine,
+# =========================
+# SESSION FACTORY
+# =========================
+
+AsyncSessionLocal = async_sessionmaker(
+    bind=engine,
     class_=AsyncSession,
     expire_on_commit=False
 )
 
-# VERY IMPORTANT — this enables tables
+# =========================
+# BASE MODEL
+# =========================
+
 Base = declarative_base()
 
-# Dependency
+# =========================
+# IMPORTANT: IMPORT MODELS
+# Ensures SQLAlchemy sees all tables
+# =========================
+
+from app.models.product import Product      # noqa
+from app.models.sale import Sale            # noqa
+from app.models.order import Order          # noqa
+from app.models.sale_item import SaleItem   # noqa
+from app.models.user import User            # noqa
+
+
+# =========================
+# DB SESSION DEPENDENCIES
+# =========================
+
+# ✅ Existing routes use this
 async def get_session():
-    async with async_session() as session:
+    async with AsyncSessionLocal() as session:
+        yield session
+
+
+# ✅ Future routes can use this
+async def get_db():
+    async with AsyncSessionLocal() as session:
         yield session

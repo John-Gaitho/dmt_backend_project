@@ -8,7 +8,10 @@ from fastapi import (
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from pydantic import BaseModel
+from pydantic import (
+    BaseModel,
+    EmailStr
+)
 
 from datetime import (
     datetime,
@@ -36,12 +39,13 @@ router = APIRouter(
 # =========================
 
 class RegisterRequest(BaseModel):
-    email: str
+    email: EmailStr
     password: str
+    is_admin: bool = False   # ✅ NEW
 
 
 class LoginRequest(BaseModel):
-    email: str
+    email: EmailStr
     password: str
 
 
@@ -59,7 +63,7 @@ def create_access_token(user: User):
         # email
         "email": user.email,
 
-        # 🔥 REQUIRED
+        # admin role
         "is_admin": user.is_admin,
 
         "exp":
@@ -88,6 +92,7 @@ async def register(
     session: AsyncSession = Depends(get_session)
 ):
 
+    # Check if user exists
     result = await session.execute(
         select(User).where(
             User.email == user.email
@@ -102,21 +107,30 @@ async def register(
             detail="User already exists"
         )
 
+    # Hash password
     hashed_pw = hash_password(
         user.password
     )
 
+    # Create user
     new_user = User(
         email=user.email,
-        password_hash=hashed_pw
+        password_hash=hashed_pw,
+
+        # ✅ SAVE ADMIN ROLE
+        is_admin=user.is_admin
     )
 
     session.add(new_user)
 
     await session.commit()
 
+    await session.refresh(new_user)
+
     return {
-        "message": "User created successfully"
+        "message": "User created successfully",
+        "email": new_user.email,
+        "is_admin": new_user.is_admin
     }
 
 
@@ -153,7 +167,7 @@ async def login(
             detail="Incorrect password"
         )
 
-    # ✅ FIXED
+    # Create token
     access_token = create_access_token(
         db_user
     )
@@ -162,13 +176,15 @@ async def login(
 
         "access_token": access_token,
 
-        "token_type": "bearer"
+        "token_type": "bearer",
+
+        "is_admin": db_user.is_admin   # ✅ helpful for frontend
 
     }
 
 
 # =========================
-# 🔥 REQUIRED — GET CURRENT USER
+# GET CURRENT USER
 # =========================
 
 @router.get("/me")
@@ -226,6 +242,7 @@ async def get_current_user(
 
         select(User).where(
             User.id == user_id
+
         )
 
     )
