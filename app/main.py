@@ -11,7 +11,6 @@ from app.models.base import Base
 from app.models import (
     product,
     sale,
-    sale_item,
     user,
     order,
     order_item,
@@ -34,15 +33,21 @@ from app.routes import (
 # =========================
 app = FastAPI(
     title="DMT Backend API",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 # =========================
 # CORS
 # =========================
+origins = [
+    "http://localhost:8080",
+]
+
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # dev only
+    allow_origins=origins,  # dev only
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

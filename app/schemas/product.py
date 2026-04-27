@@ -8,7 +8,8 @@ class ProductBase(BaseModel):
     category: Optional[str] = ""
     description: Optional[str] = ""
     stock_quantity: Optional[int] = 100
-    image_url: Optional[str] = None  # ✅ FIX
+    image_urls: Optional[List[str]] = []
+
 
 
 class ProductCreate(ProductBase):

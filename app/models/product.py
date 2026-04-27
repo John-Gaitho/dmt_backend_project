@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Column, String, Boolean, Numeric, Integer, Text
+from sqlalchemy import Column, String, Boolean, Numeric, Integer, Text, JSON
 
 from app.models.base import Base
 
@@ -23,8 +23,11 @@ class Product(Base):
 
     description = Column(Text)
 
-    image_url = Column(String)  # ✅ NEW
+    image_urls = Column(JSON, nullable=True)
 
     in_stock = Column(Boolean, default=True)
 
     stock_quantity = Column(Integer, default=100)
+
+    
+

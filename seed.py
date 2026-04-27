@@ -16,11 +16,8 @@ async def seed_data():
     # =========================
     # CREATE TABLES
     # =========================
-
     async with engine.begin() as conn:
-        await conn.run_sync(
-            Base.metadata.create_all
-        )
+        await conn.run_sync(Base.metadata.create_all)
 
     async with AsyncSession(engine) as session:
 
@@ -29,13 +26,10 @@ async def seed_data():
         # =========================
         # CREATE ADMIN USER
         # =========================
-
         admin_email = "admin@dmt.com"
 
         result = await session.execute(
-            select(User).where(
-                User.email == admin_email
-            )
+            select(User).where(User.email == admin_email)
         )
 
         admin = result.scalar_one_or_none()
@@ -43,31 +37,22 @@ async def seed_data():
         if not admin:
 
             admin = User(
-
                 email=admin_email,
-
-                password_hash=
-                    hash_password("123456"),
-
-                # ✅ VERY IMPORTANT
+                password_hash=hash_password("123456"),
                 is_admin=True
-
             )
 
             session.add(admin)
-
             await session.commit()
 
             print("✅ Admin created")
 
         else:
-
             print("ℹ️ Admin already exists")
 
         # =========================
         # PRODUCTS
         # =========================
-
         products_data = [
 
             {
@@ -75,8 +60,9 @@ async def seed_data():
                 "price": 2500,
                 "category": "Brakes",
                 "description": "Toyota brake pads set",
-                "image_url":
-                "https://images.unsplash.com/photo-1615906655593-ad0386982a0f",
+                "image_urls": [
+                    "https://images.unsplash.com/photo-1615906655593-ad0386982a0f"
+                ],
                 "stock_quantity": 50
             },
 
@@ -85,8 +71,9 @@ async def seed_data():
                 "price": 800,
                 "category": "Engine",
                 "description": "Premium engine oil filter",
-                "image_url":
-                "https://images.unsplash.com/photo-1581092335397-9583eb92d232",
+                "image_urls": [
+                    "https://images.unsplash.com/photo-1581092335397-9583eb92d232"
+                ],
                 "stock_quantity": 100
             },
 
@@ -95,8 +82,9 @@ async def seed_data():
                 "price": 450,
                 "category": "Engine",
                 "description": "NGK spark plug",
-                "image_url":
-                "https://images.unsplash.com/photo-1605731414532-6b26976cc153",
+                "image_urls": [
+                    "https://images.unsplash.com/photo-1605731414532-6b26976cc153"
+                ],
                 "stock_quantity": 200
             },
 
@@ -105,8 +93,9 @@ async def seed_data():
                 "price": 11500,
                 "category": "Electrical",
                 "description": "Heavy-duty automotive battery",
-                "image_url":
-                "https://images.unsplash.com/photo-1587202372775-e229f172b9d7",
+                "image_urls": [
+                    "https://images.unsplash.com/photo-1587202372775-e229f172b9d7"
+                ],
                 "stock_quantity": 15
             },
 
@@ -115,8 +104,9 @@ async def seed_data():
                 "price": 1200,
                 "category": "Engine",
                 "description": "High-performance air filter",
-                "image_url":
-                "https://images.unsplash.com/photo-1600959907703-125ba1374a12",
+                "image_urls": [
+                    "https://images.unsplash.com/photo-1600959907703-125ba1374a12"
+                ],
                 "stock_quantity": 60
             },
 
@@ -125,8 +115,9 @@ async def seed_data():
                 "price": 18500,
                 "category": "Cooling",
                 "description": "Durable aluminum radiator",
-                "image_url":
-                "https://images.unsplash.com/photo-1625047509168-a7026f36de04",
+                "image_urls": [
+                    "https://images.unsplash.com/photo-1625047509168-a7026f36de04"
+                ],
                 "stock_quantity": 10
             },
 
@@ -135,8 +126,9 @@ async def seed_data():
                 "price": 7200,
                 "category": "Transmission",
                 "description": "Heavy-duty clutch plate",
-                "image_url":
-                "https://images.unsplash.com/photo-1621259182978-fbf93132d53d",
+                "image_urls": [
+                    "https://images.unsplash.com/photo-1621259182978-fbf93132d53d"
+                ],
                 "stock_quantity": 25
             }
 
@@ -148,36 +140,25 @@ async def seed_data():
 
             result = await session.execute(
                 select(Product).where(
-                    Product.name ==
-                    pdata["name"]
+                    Product.name == pdata["name"]
                 )
             )
 
             existing = result.scalar_one_or_none()
 
             if not existing:
-
-                product = Product(
-                    **pdata
-                )
-
+                product = Product(**pdata)
                 session.add(product)
-
                 added_count += 1
 
         await session.commit()
 
-        print(
-            f"✅ {added_count} Products added"
-        )
-
+        print(f"✅ {added_count} Products added")
         print("🎉 Seed completed")
 
 
 # =========================
 # RUN
 # =========================
-
 if __name__ == "__main__":
-
     asyncio.run(seed_data())

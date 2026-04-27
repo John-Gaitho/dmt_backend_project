@@ -3,7 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
-from app.models.sale_item import SaleItem
 from app.models.product import Product
 
 router = APIRouter(

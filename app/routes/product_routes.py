@@ -31,7 +31,7 @@ async def create_product(
         category=product.category,
         description=product.description,
         stock_quantity=product.stock_quantity,
-        images=product.images,
+        image_urls=product.image_urls
     )
 
     session.add(new_product)

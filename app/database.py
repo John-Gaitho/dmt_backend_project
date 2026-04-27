@@ -42,7 +42,6 @@ Base = declarative_base()
 from app.models.product import Product      # noqa
 from app.models.sale import Sale            # noqa
 from app.models.order import Order          # noqa
-from app.models.sale_item import SaleItem   # noqa
 from app.models.user import User            # noqa
 
 
