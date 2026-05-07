@@ -1,12 +1,48 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import List, Optional
+from datetime import datetime
 
 
-class OrderCreate(BaseModel):
-    customer_name: Optional[str] = None
+# =========================
+# ORDER ITEM
+# =========================
+class OrderItemBase(BaseModel):
+    product_id: str
+    product_name: str
+    quantity: int
+    price: float
+
+
+class OrderItemCreate(OrderItemBase):
+    pass
+
+
+class OrderItemResponse(OrderItemBase):
+    pass
+
+
+# =========================
+# ORDER
+# =========================
+class OrderBase(BaseModel):
+    user_id: Optional[str] = None
     total_amount: float
-    payment_method: Optional[str] = None
+    status: Optional[str] = "pending"
+
+
+class OrderCreate(OrderBase):
+    items: List[OrderItemCreate]
 
 
 class OrderUpdate(BaseModel):
-    status: str
+    status: Optional[str] = None
+
+
+class OrderResponse(OrderBase):
+    id: str
+    created_at: datetime
+    items: List[OrderItemResponse] = []
+
+    class Config:
+        from_attributes = True
+        

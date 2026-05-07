@@ -1,4 +1,8 @@
+
 import asyncio
+import uuid
+from random import choice, randint
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -7,6 +11,8 @@ from app.models.base import Base
 
 from app.models.user import User
 from app.models.product import Product
+from app.models.order import Order
+from app.models.order_item import OrderItem
 
 from app.utils.security import hash_password
 
@@ -24,29 +30,24 @@ async def seed_data():
         print("🌱 Starting seed process...")
 
         # =========================
-        # CREATE ADMIN USER
+        # ADMIN USER
         # =========================
         admin_email = "admin@dmt.com"
 
         result = await session.execute(
             select(User).where(User.email == admin_email)
         )
-
         admin = result.scalar_one_or_none()
 
         if not admin:
-
             admin = User(
                 email=admin_email,
                 password_hash=hash_password("123456"),
                 is_admin=True
             )
-
             session.add(admin)
             await session.commit()
-
             print("✅ Admin created")
-
         else:
             print("ℹ️ Admin already exists")
 
@@ -54,7 +55,6 @@ async def seed_data():
         # PRODUCTS
         # =========================
         products_data = [
-
             {
                 "name": "Brake Pads",
                 "price": 2500,
@@ -63,9 +63,9 @@ async def seed_data():
                 "image_urls": [
                     "https://images.unsplash.com/photo-1615906655593-ad0386982a0f"
                 ],
-                "stock_quantity": 50
+                "stock_quantity": 50,
+                "in_stock": True
             },
-
             {
                 "name": "Oil Filter",
                 "price": 800,
@@ -74,9 +74,9 @@ async def seed_data():
                 "image_urls": [
                     "https://images.unsplash.com/photo-1581092335397-9583eb92d232"
                 ],
-                "stock_quantity": 100
+                "stock_quantity": 100,
+                "in_stock": True
             },
-
             {
                 "name": "Spark Plug",
                 "price": 450,
@@ -85,9 +85,9 @@ async def seed_data():
                 "image_urls": [
                     "https://images.unsplash.com/photo-1605731414532-6b26976cc153"
                 ],
-                "stock_quantity": 200
+                "stock_quantity": 200,
+                "in_stock": True
             },
-
             {
                 "name": "Battery 12V",
                 "price": 11500,
@@ -96,69 +96,97 @@ async def seed_data():
                 "image_urls": [
                     "https://images.unsplash.com/photo-1587202372775-e229f172b9d7"
                 ],
-                "stock_quantity": 15
+                "stock_quantity": 15,
+                "in_stock": True
             },
-
-            {
-                "name": "Air Filter",
-                "price": 1200,
-                "category": "Engine",
-                "description": "High-performance air filter",
-                "image_urls": [
-                    "https://images.unsplash.com/photo-1600959907703-125ba1374a12"
-                ],
-                "stock_quantity": 60
-            },
-
-            {
-                "name": "Radiator",
-                "price": 18500,
-                "category": "Cooling",
-                "description": "Durable aluminum radiator",
-                "image_urls": [
-                    "https://images.unsplash.com/photo-1625047509168-a7026f36de04"
-                ],
-                "stock_quantity": 10
-            },
-
-            {
-                "name": "Clutch Plate",
-                "price": 7200,
-                "category": "Transmission",
-                "description": "Heavy-duty clutch plate",
-                "image_urls": [
-                    "https://images.unsplash.com/photo-1621259182978-fbf93132d53d"
-                ],
-                "stock_quantity": 25
-            }
-
         ]
 
-        added_count = 0
+        added_products = 0
 
         for pdata in products_data:
-
             result = await session.execute(
-                select(Product).where(
-                    Product.name == pdata["name"]
-                )
+                select(Product).where(Product.name == pdata["name"])
             )
-
             existing = result.scalar_one_or_none()
 
             if not existing:
-                product = Product(**pdata)
-                session.add(product)
-                added_count += 1
+                session.add(Product(**pdata))
+                added_products += 1
+
+        await session.commit()
+        print(f"✅ {added_products} Products added")
+
+        # =========================
+        # ORDERS + ITEMS
+        # =========================
+        print("📦 Seeding orders...")
+
+        result = await session.execute(select(Product))
+        products = result.scalars().all()
+
+        if not products:
+            print("⚠️ No products found, skipping orders...")
+            return
+
+        statuses = ["pending", "processing", "shipped", "delivered"]
+
+        added_orders = 0
+
+        for _ in range(10):
+
+            num_items = randint(1, 3)
+            selected_products = [
+                choice(products) for _ in range(num_items)
+            ]
+
+            items = []
+            total = 0
+
+            for product in selected_products:
+
+                quantity = randint(1, 5)
+                price = float(product.price)
+
+                item_total = price * quantity
+                total += item_total
+
+                items.append({
+                    "product": product,
+                    "quantity": quantity,
+                    "price": price
+                })
+
+            # ✅ CREATE ORDER WITH FINAL TOTAL (NO ZERO STATE)
+            order = Order(
+                id=str(uuid.uuid4()),
+                user_id=None,
+                total_amount=round(total, 2),
+                status=choice(statuses)
+            )
+
+            session.add(order)
+            await session.flush()
+
+            # ✅ CREATE ITEMS AFTER ORDER
+            for item in items:
+                session.add(
+                    OrderItem(
+                        id=str(uuid.uuid4()),
+                        order_id=order.id,
+                        product_id=item["product"].id,
+                        quantity=item["quantity"],
+                        price=item["price"]
+                    )
+                )
+
+            added_orders += 1
 
         await session.commit()
 
-        print(f"✅ {added_count} Products added")
-        print("🎉 Seed completed")
+        print(f"✅ {added_orders} Orders added")
+        print("🎉 Seed completed successfully!")
 
 
-# =========================
-# RUN
-# =========================
 if __name__ == "__main__":
     asyncio.run(seed_data())
+
