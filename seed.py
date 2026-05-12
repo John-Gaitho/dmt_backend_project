@@ -1,4 +1,3 @@
-
 import asyncio
 import uuid
 from random import choice, randint
@@ -45,9 +44,12 @@ async def seed_data():
                 password_hash=hash_password("123456"),
                 is_admin=True
             )
+
             session.add(admin)
             await session.commit()
+
             print("✅ Admin created")
+
         else:
             print("ℹ️ Admin already exists")
 
@@ -104,9 +106,11 @@ async def seed_data():
         added_products = 0
 
         for pdata in products_data:
+
             result = await session.execute(
                 select(Product).where(Product.name == pdata["name"])
             )
+
             existing = result.scalar_one_or_none()
 
             if not existing:
@@ -114,6 +118,7 @@ async def seed_data():
                 added_products += 1
 
         await session.commit()
+
         print(f"✅ {added_products} Products added")
 
         # =========================
@@ -128,15 +133,22 @@ async def seed_data():
             print("⚠️ No products found, skipping orders...")
             return
 
-        statuses = ["pending", "processing", "shipped", "delivered"]
+        statuses = [
+            "pending",
+            "processing",
+            "shipped",
+            "delivered"
+        ]
 
         added_orders = 0
 
         for _ in range(10):
 
             num_items = randint(1, 3)
+
             selected_products = [
-                choice(products) for _ in range(num_items)
+                choice(products)
+                for _ in range(num_items)
             ]
 
             items = []
@@ -156,7 +168,9 @@ async def seed_data():
                     "price": price
                 })
 
-            # ✅ CREATE ORDER WITH FINAL TOTAL (NO ZERO STATE)
+            # =========================
+            # CREATE ORDER
+            # =========================
             order = Order(
                 id=str(uuid.uuid4()),
                 user_id=None,
@@ -165,19 +179,27 @@ async def seed_data():
             )
 
             session.add(order)
+
+            # flush to get order.id immediately
             await session.flush()
 
-            # ✅ CREATE ITEMS AFTER ORDER
+            # =========================
+            # CREATE ORDER ITEMS
+            # =========================
             for item in items:
-                session.add(
-                    OrderItem(
-                        id=str(uuid.uuid4()),
-                        order_id=order.id,
-                        product_id=item["product"].id,
-                        quantity=item["quantity"],
-                        price=item["price"]
-                    )
+
+                product = item["product"]
+
+                order_item = OrderItem(
+                    id=str(uuid.uuid4()),
+                    order_id=order.id,
+                    product_id=product.id,
+                    product_name=product.name,
+                    quantity=item["quantity"],
+                    price=item["price"]
                 )
+
+                session.add(order_item)
 
             added_orders += 1
 
@@ -189,4 +211,3 @@ async def seed_data():
 
 if __name__ == "__main__":
     asyncio.run(seed_data())
-

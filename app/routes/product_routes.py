@@ -59,7 +59,7 @@ async def get_products(
 
 
 # =========================
-# UPDATE PRODUCT ⭐ FIXED
+# UPDATE PRODUCT (FIXED ⭐)
 # =========================
 
 @router.put("/{product_id}")
@@ -70,29 +70,25 @@ async def update_product(
 ):
 
     result = await session.execute(
-        select(Product).where(
-            Product.id == product_id
-        )
+        select(Product).where(Product.id == product_id)
     )
 
     db_product = result.scalar_one_or_none()
 
     if not db_product:
-
         raise HTTPException(
             status_code=404,
             detail="Product not found"
         )
 
-    # Update fields dynamically
+    # ✅ IMPORTANT FIX: only update fields that were actually sent
+    update_data = product.dict(
+        exclude_unset=True,
+        exclude_none=True
+    )
 
-    for key, value in product.dict().items():
-
-        setattr(
-            db_product,
-            key,
-            value
-        )
+    for key, value in update_data.items():
+        setattr(db_product, key, value)
 
     await session.commit()
     await session.refresh(db_product)
@@ -111,23 +107,20 @@ async def delete_product(
 ):
 
     result = await session.execute(
-        select(Product).where(
-            Product.id == product_id
-        )
+        select(Product).where(Product.id == product_id)
     )
 
     product = result.scalar_one_or_none()
 
-    if product:
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found"
+        )
 
-        await session.delete(product)
-        await session.commit()
+    await session.delete(product)
+    await session.commit()
 
-        return {
-            "message": "Product deleted"
-        }
-
-    raise HTTPException(
-        status_code=404,
-        detail="Product not found"
-    )
+    return {
+        "message": "Product deleted"
+    }

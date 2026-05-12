@@ -4,7 +4,7 @@ from sqlalchemy import select
 
 from uuid import UUID
 
-from app.database import get_db
+from app.database import get_session
 from app.models.sale import Sale
 from app.schemas.sale import SaleCreate, SaleResponse
 
@@ -23,7 +23,7 @@ router = APIRouter(
 )
 async def create_sale(
     sale: SaleCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_session)
 ):
     db_sale = Sale(**sale.dict())
 
@@ -42,7 +42,7 @@ async def create_sale(
     response_model=list[SaleResponse]
 )
 async def get_sales(
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_session)
 ):
     result = await db.execute(select(Sale))
     sales = result.scalars().all()
@@ -59,7 +59,7 @@ async def get_sales(
 )
 async def get_sale(
     sale_id: UUID,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_session)
 ):
     result = await db.execute(
         select(Sale).where(Sale.id == str(sale_id))
@@ -86,7 +86,7 @@ async def get_sale(
 async def update_sale(
     sale_id: UUID,
     updated_sale: SaleCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_session)
 ):
     result = await db.execute(
         select(Sale).where(Sale.id == str(sale_id))
@@ -118,7 +118,7 @@ async def update_sale(
 )
 async def delete_sale(
     sale_id: UUID,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_session)
 ):
     result = await db.execute(
         select(Sale).where(Sale.id == str(sale_id))

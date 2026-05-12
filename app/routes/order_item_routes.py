@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.database import get_db
+from app.database import get_session
 from app.models.product import Product
 
 router = APIRouter(
@@ -16,7 +16,7 @@ router = APIRouter(
 
 @router.get("/")
 async def get_order_items(
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_session)
 ):
     result = await db.execute(
         select(SaleItem)
@@ -32,7 +32,7 @@ async def get_order_items(
 @router.get("/order/{order_id}")
 async def get_items_by_order(
     order_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_session)
 ):
     result = await db.execute(
         select(SaleItem)
@@ -53,7 +53,7 @@ async def create_order_item(
     product_id: int,
     quantity: int,
     price: float,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_session)
 ):
     # Check product exists
     result = await db.execute(
@@ -92,7 +92,7 @@ async def create_order_item(
 async def update_order_item(
     item_id: int,
     quantity: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_session)
 ):
     result = await db.execute(
         select(SaleItem)
@@ -122,7 +122,7 @@ async def update_order_item(
 @router.delete("/{item_id}")
 async def delete_order_item(
     item_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_session)
 ):
     result = await db.execute(
         select(SaleItem)
