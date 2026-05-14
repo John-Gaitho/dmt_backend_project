@@ -1,41 +1,46 @@
-from fastapi import APIRouter, UploadFile, File
-import shutil
-import os
-import uuid
+from fastapi import APIRouter, UploadFile, File, HTTPException
+import cloudinary
+import cloudinary.uploader
+
+from app.config import settings
 
 router = APIRouter(
     prefix="/upload",
     tags=["Upload"]
 )
 
-UPLOAD_DIR = "uploads"
+# =========================
+# CLOUDINARY CONFIG
+# =========================
 
-# Create folder if not exists
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+cloudinary.config(
+    cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+    api_key=settings.CLOUDINARY_API_KEY,
+    api_secret=settings.CLOUDINARY_API_SECRET,
+    secure=True
+)
 
+# =========================
+# UPLOAD IMAGE
+# =========================
 
 @router.post("/")
 async def upload_file(
     file: UploadFile = File(...)
 ):
-    # Generate unique filename
-    file_ext = file.filename.split(".")[-1]
-
-    unique_name = f"{uuid.uuid4()}.{file_ext}"
-
-    file_path = os.path.join(
-        UPLOAD_DIR,
-        unique_name
-    )
-
-    # Save file
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(
+    try:
+        result = cloudinary.uploader.upload(
             file.file,
-            buffer
+            folder="dmt_uploads"
         )
 
-    return {
-        "filename": unique_name,
-        "url": f"/uploads/{unique_name}"
-    }
+        return {
+            "filename": result["public_id"],
+            "url": result["secure_url"]
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )

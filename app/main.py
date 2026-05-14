@@ -4,7 +4,13 @@ from fastapi.staticfiles import StaticFiles
 
 from app.database import engine, Base
 
-import app.models
+from app.models.user import User
+from app.models.credit import CreditAccount, CreditItem
+from app.models.product import Product
+from app.models.sale import Sale
+from app.models.order import Order
+from app.models.order_item import OrderItem
+#import app.models
 
 from app.routes import (
     credit_routes,
@@ -23,10 +29,8 @@ app = FastAPI(title="DMT Backend API", version="1.0.0")
 # =========================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:8080",
-    ],
+    allow_origins=["*"],
+    
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
