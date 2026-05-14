@@ -10,7 +10,8 @@ from app.models.product import Product
 from app.models.sale import Sale
 from app.models.order import Order
 from app.models.order_item import OrderItem
-#import app.models
+
+import os
 
 from app.routes import (
     credit_routes,
@@ -39,7 +40,15 @@ app.add_middleware(
 # =========================
 # STATIC FILES
 # =========================
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+# Create uploads folder automatically
+os.makedirs("uploads", exist_ok=True)
+
+app.mount(
+    "/uploads",
+    StaticFiles(directory="uploads"),
+    name="uploads"
+)
 
 # =========================
 # STARTUP

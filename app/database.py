@@ -34,6 +34,7 @@ from app.models.credit import CreditAccount, CreditItem
 from app.models.sale import Sale  # noqa
 from app.models.order import Order  # noqa
 from app.models.user import User  # noqa
+from app.models.order_item import OrderItem
 
 # =========================
 # DEPENDENCY
